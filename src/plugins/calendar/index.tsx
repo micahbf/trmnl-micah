@@ -1,7 +1,7 @@
 import type { Plugin, RenderContext } from "../../types.js";
 import { loadEvents, type CalEvent } from "./ics.js";
 import { demoEvents } from "./demo.js";
-import { addDays, dayKeyOf } from "./dates.js";
+import { addDays, dayKeyOf, parseInZone } from "./dates.js";
 
 export interface CalendarOptions {
   icsUrls: string[];
@@ -11,6 +11,8 @@ export interface CalendarOptions {
   ownerEmail?: string;
   /** Hide events whose title contains any of these (case-insensitive) or matches the regex. */
   hideTitles?: (string | RegExp)[];
+  /** Thin hour grid of today's events on the right edge, spanning the first event − 1h to the last + 1h. */
+  timeline?: boolean;
 }
 
 interface Row {
@@ -21,11 +23,19 @@ interface Row {
   /** Event continues past this day; show the end as a weekday instead of a time. */
   endsLater?: boolean;
   ongoing?: boolean;
+  /** Starts before an earlier event on the same day has ended. */
+  overlapsEarlier?: boolean;
 }
 
 interface Day {
   key: string; // YYYY-MM-DD in display zone
   rows: Row[];
+}
+
+interface CalData {
+  days: Day[];
+  /** All of today's timed events, including ones already over, for the timeline. */
+  today: { start: Date; end: Date }[];
 }
 
 // Fixed heights so we know exactly how much fits before handing off to Satori.
@@ -36,22 +46,40 @@ const DAY_HEADER = 40;
 const TIMED_ROW = 60;
 const ALLDAY_ROW = 38;
 const GAP = 6;
+const TIMELINE_BARS = 20;
+const BAR_GAP = 2; // between back-to-back events, so the boundary reads over a gridline
+const FRAME = 2; // black margin around white outlines of overlapping events
+const TIMELINE_GAP = 8;
+const TICK = 4;
+const TIMELINE_MARGIN = 1; // hours before the first event and after the last
+const TIMELINE_EMPTY = [7, 22]; // hour range when today has no timed events
+const timelineLabelW = (hour12: boolean) => (hour12 ? 24 : 16);
+const timelineW = (hour12: boolean) => timelineLabelW(hour12) + TICK + 2 + TIMELINE_BARS;
 
-export const calendarPlugin: Plugin<CalendarOptions, Day[]> = {
+export const calendarPlugin: Plugin<CalendarOptions, CalData> = {
   id: "calendar",
 
   async load(options, ctx) {
-    const rangeStart = ctx.now;
+    // From midnight so the timeline also gets today's earlier events.
+    const rangeStart = parseInZone(`${dayKeyOf(ctx.now, ctx.timeZone)}T00:00`, ctx.timeZone);
     const rangeEnd = new Date(ctx.now.getTime() + (options.daysAhead + 1) * 86_400_000);
     const events = ctx.demo || options.icsUrls.length === 0
       ? demoEvents(ctx)
       : await loadEvents(options.icsUrls, rangeStart, rangeEnd, options.hideDeclined, options.ownerEmail);
     const hidden = (title: string) =>
       options.hideTitles?.some((p) => (typeof p === "string" ? title.toLowerCase().includes(p.toLowerCase()) : p.test(title)));
-    return groupByDay(events.filter((e) => !hidden(e.title)), ctx, options.daysAhead);
+    const shown = events.filter((e) => !hidden(e.title));
+    const dayStart = rangeStart;
+    const dayEnd = parseInZone(`${addDays(dayKeyOf(ctx.now, ctx.timeZone), 1)}T00:00`, ctx.timeZone);
+    return {
+      days: groupByDay(shown, ctx, options.daysAhead),
+      today: shown
+        .filter((e) => !e.allDay && e.end > dayStart && e.start < dayEnd)
+        .map((e) => ({ start: e.start, end: e.end })),
+    };
   },
 
-  render({ data: days, options, size, ctx }) {
+  render({ data: { days, today }, options, size, ctx }) {
     const fmt = timeFormatter(ctx.timeZone, options.hour12);
     const timeCol = options.hour12 ? 120 : 100;
 
@@ -76,33 +104,175 @@ export const calendarPlugin: Plugin<CalendarOptions, Day[]> = {
       n++;
     }
 
+    const innerH = size.height - PAD * 2;
+    const listW = size.width - PAD * 2 - (options.timeline ? timelineW(options.hour12) + TIMELINE_GAP : 0);
     return (
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          width: size.width - PAD * 2,
-          height: size.height - PAD * 2,
-          padding: PAD,
-        }}
-      >
-        {items.slice(0, n).map((it, i) =>
-          it.type === "header" ? (
-            <DayHeader key={i} dayKey={it.key} ctx={ctx} />
-          ) : it.type === "empty" ? (
-            <div key={i} style={{ display: "flex", height: ALLDAY_ROW, alignItems: "center", fontSize: 20, marginLeft: 4 }}>
-              Nothing else today
-            </div>
-          ) : it.row.kind === "allday" ? (
-            <AllDayRow key={i} row={it.row} timeCol={timeCol} />
-          ) : (
-            <TimedRow key={i} row={it.row} fmt={fmt} ctx={ctx} timeCol={timeCol} />
-          ),
+      <div style={{ display: "flex", width: size.width - PAD * 2, height: innerH, padding: PAD }}>
+        <div style={{ display: "flex", flexDirection: "column", width: listW, height: innerH }}>
+          {items.slice(0, n).map((it, i) =>
+            it.type === "header" ? (
+              <DayHeader key={i} dayKey={it.key} ctx={ctx} />
+            ) : it.type === "empty" ? (
+              <div key={i} style={{ display: "flex", height: ALLDAY_ROW, alignItems: "center", fontSize: 20, marginLeft: 4 }}>
+                Nothing else today
+              </div>
+            ) : it.row.kind === "allday" ? (
+              <AllDayRow key={i} row={it.row} timeCol={timeCol} />
+            ) : (
+              <TimedRow key={i} row={it.row} fmt={fmt} ctx={ctx} timeCol={timeCol} />
+            ),
+          )}
+        </div>
+        {options.timeline && (
+          <Timeline events={today} hour12={options.hour12} height={innerH} ctx={ctx} />
         )}
       </div>
     );
   },
 };
+
+/** Today on a vertical hour axis: sparse hour labels and ticks on the left, events as bars, a line at now. */
+function Timeline({ events, hour12, height, ctx }: {
+  events: CalData["today"];
+  hour12: boolean;
+  height: number;
+  ctx: RenderContext;
+}) {
+  const today = dayKeyOf(ctx.now, ctx.timeZone);
+  const at = (h: number) => (h >= 24 ? parseInZone(`${addDays(today, 1)}T00:00`, ctx.timeZone) : parseInZone(`${today}T${String(h).padStart(2, "0")}:00`, ctx.timeZone));
+  const hourOf = (d: Date) => {
+    const [h, m] = d.toLocaleTimeString("en-GB", { timeZone: ctx.timeZone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).split(":").map(Number);
+    return dayKeyOf(d, ctx.timeZone) < today ? 0 : dayKeyOf(d, ctx.timeZone) > today ? 24 : h + m / 60;
+  };
+  // Whole hours from the first event to the last, plus a margin, within today.
+  let [from, to] = TIMELINE_EMPTY;
+  if (events.length) {
+    from = Math.max(0, Math.floor(Math.min(...events.map((e) => hourOf(e.start)))) - TIMELINE_MARGIN);
+    to = Math.min(24, Math.ceil(Math.max(...events.map((e) => hourOf(e.end)))) + TIMELINE_MARGIN);
+  }
+  // Short days get denser labels.
+  const labelEvery = to - from <= 8 ? 1 : to - from <= 14 ? 2 : 3;
+  const t0 = at(from).getTime();
+  const t1 = at(to).getTime();
+  const y = (d: Date) => Math.round(((Math.min(Math.max(d.getTime(), t0), t1) - t0) / (t1 - t0)) * height);
+
+  // Group overlapping events into clusters, with side-by-side lanes inside each.
+  const sorted = [...events].sort((a, b) => a.start.getTime() - b.start.getTime() || b.end.getTime() - a.end.getTime());
+  type Bar = { start: Date; end: Date; lane: number };
+  const clusters: { start: Date; end: Date; bars: Bar[]; lanes: number }[] = [];
+  for (const e of sorted) {
+    let c = clusters.at(-1);
+    if (!c || e.start >= c.end) {
+      c = { start: e.start, end: e.end, bars: [], lanes: 1 };
+      clusters.push(c);
+    }
+    const laneEnds = new Map<number, number>();
+    for (const b of c.bars) laneEnds.set(b.lane, Math.max(laneEnds.get(b.lane) ?? 0, b.end.getTime()));
+    let lane = 0;
+    while ((laneEnds.get(lane) ?? 0) > e.start.getTime()) lane++;
+    c.bars.push({ ...e, lane });
+    c.lanes = Math.max(c.lanes, lane + 1);
+    if (e.end > c.end) c.end = e.end;
+  }
+
+  const labelW = timelineLabelW(hour12);
+  const width = timelineW(hour12);
+  const barX = labelW + TICK + 2;
+  const barW = TIMELINE_BARS;
+  const nowY = y(ctx.now);
+  const showNow = ctx.now.getTime() >= t0 && ctx.now.getTime() <= t1;
+  const label = (h: number) => (hour12 ? `${h % 12 || 12}${h % 24 < 12 ? "a" : "p"}` : String(h % 24));
+  return (
+    <div style={{ display: "flex", position: "relative", width, height, marginLeft: TIMELINE_GAP }}>
+      {Array.from({ length: to - from + 1 }, (_, i) => {
+        const h = from + i;
+        const top = Math.min(y(at(h)), height - 2);
+        const labeled = h % labelEvery === 0 && h > from && h < to;
+        return (
+          <div key={`t${h}`} style={{ display: "flex" }}>
+            <div style={{ position: "absolute", left: labelW, top, width: TICK, height: 2, background: "black" }} />
+            {labeled && (
+              <>
+                {/* Faint gridline through the bars so positions read against the label. */}
+                <div style={{ position: "absolute", left: barX, top, width: barW, height: 1, background: "#aaa" }} />
+                <div
+                  style={{
+                    display: "flex",
+                    position: "absolute",
+                    left: 0,
+                    top: top - 7,
+                    width: labelW - 1,
+                    height: 16,
+                    justifyContent: "flex-end",
+                    alignItems: "center",
+                    fontSize: 12,
+                    fontWeight: 700,
+                    lineHeight: 1,
+                  }}
+                >
+                  {label(h)}
+                </div>
+              </>
+            )}
+          </div>
+        );
+      })}
+      {clusters.map((c, i) => {
+        const past = (d: Date) => (d <= ctx.now ? "#999" : "black");
+        const startY = y(c.start);
+        const endY = y(c.end) - BAR_GAP;
+        if (c.bars.length === 1) {
+          return (
+            <div
+              key={`e${i}`}
+              style={{ position: "absolute", left: barX, top: startY, width: barW, height: Math.max(3, endY - startY), background: past(c.end) }}
+            />
+          );
+        }
+        // Overlaps: one box over the whole period, with each event outlined in white inside it.
+        // The box has a FRAME-px margin on every side so each outline is surrounded by black
+        // (an outline touching the white background would vanish). The outlines sit at the
+        // exact times; only the frame pokes out past them.
+        const laneW = Math.floor((barW - FRAME * 2 - FRAME * (c.lanes - 1)) / c.lanes);
+        return (
+          <div
+            key={`e${i}`}
+            style={{
+              display: "flex",
+              position: "absolute",
+              left: barX,
+              top: startY - FRAME,
+              width: barW,
+              height: endY - startY + FRAME * 2,
+              background: past(c.end),
+            }}
+          >
+            {c.bars.map((b, j) => {
+              const top = y(b.start);
+              const left = FRAME + b.lane * (laneW + FRAME);
+              return (
+                <div
+                  key={j}
+                  style={{
+                    position: "absolute",
+                    left,
+                    top: top - startY + FRAME,
+                    // Borders are content-box, hence the -2s. The last lane takes the rounding slack.
+                    width: (b.lane === c.lanes - 1 ? barW - FRAME - left : laneW) - 2,
+                    height: Math.max(1, y(b.end) - BAR_GAP - top - 2),
+                    border: "1px solid white",
+                    background: past(b.end),
+                  }}
+                />
+              );
+            })}
+          </div>
+        );
+      })}
+      {showNow && <div style={{ position: "absolute", left: labelW, top: Math.min(Math.max(nowY - 2, 0), height - 4), width: width - labelW, height: 4, background: "black" }} />}
+    </div>
+  );
+}
 
 const rowHeight = (row: Row | undefined) => (row?.kind === "timed" ? TIMED_ROW : ALLDAY_ROW);
 
@@ -143,7 +313,7 @@ function TimedRow({ row, fmt, ctx, timeCol }: { row: Row; fmt: TimeFmt; ctx: Ren
   const endWeekday = row.endsLater
     ? row.end!.toLocaleDateString("en-US", { weekday: "short", timeZone: ctx.timeZone })
     : null;
-  const inv = row.ongoing;
+  const inv = row.ongoing || row.overlapsEarlier;
   return (
     <div style={{ display: "flex", height: TIMED_ROW - GAP, marginBottom: GAP }}>
       <div
@@ -271,6 +441,12 @@ function groupByDay(events: CalEvent[], ctx: RenderContext, daysAhead: number): 
       if (a.kind !== b.kind) return a.kind === "allday" ? -1 : 1;
       return (a.start?.getTime() ?? 0) - (b.start?.getTime() ?? 0) || a.title.localeCompare(b.title);
     });
+    let latestEnd = 0;
+    for (const row of day.rows) {
+      if (row.kind !== "timed") continue;
+      row.overlapsEarlier = row.start!.getTime() < latestEnd;
+      latestEnd = Math.max(latestEnd, row.end!.getTime());
+    }
   }
   return sorted;
 }

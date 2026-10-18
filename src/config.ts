@@ -15,6 +15,8 @@ const calendar: CalendarOptions = {
   // Hide events by title: strings match anywhere, case-insensitive; regexes for anything fancier.
   // e.g. ["Focus time", "OOO", /^Hold:/]
   hideTitles: [],
+  // Hour grid of today's events down the right edge (first event − 1h to last + 1h).
+  timeline: true,
 };
 
 export const config: ScreenConfig = {
