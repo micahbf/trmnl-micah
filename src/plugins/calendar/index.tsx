@@ -244,7 +244,8 @@ function Timeline({ events, hour12, height, ctx }: {
               top: startY - FRAME,
               width: barW,
               height: endY - startY + FRAME * 2,
-              background: past(c.end),
+              // Dark grey to match the overlap time boxes in the list.
+              background: c.end <= ctx.now ? "#999" : "#404040",
             }}
           >
             {c.bars.map((b, j) => {
