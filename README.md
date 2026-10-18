@@ -68,6 +68,44 @@ Satori gotchas:
   Noto Sans Math glyphs (`src/glyphs.ts`). They are always black, so avoid them in
   white-on-black text.
 
+## Deploying (Caddy + systemd)
+
+Requires Node 22.2+.
+
+```sh
+git clone https://github.com/micahbf/trmnl-micah.git && cd trmnl-micah
+npm ci --omit=dev
+cp .env.example .env   # set GCAL_ICS_URLS, SCREEN_KEY, TZ_DISPLAY (servers are usually UTC)
+npm start              # listens on 127.0.0.1:3000 (HOST/PORT to change)
+```
+
+`/etc/systemd/system/trmnl.service`:
+
+```ini
+[Unit]
+Description=TRMNL screen renderer
+After=network-online.target
+
+[Service]
+WorkingDirectory=/path/to/trmnl-micah
+ExecStart=/usr/bin/npm start
+Restart=always
+User=youruser
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Then run `sudo systemctl enable --now trmnl`. In the Caddyfile:
+
+```
+trmnl.example.com {
+	reverse_proxy 127.0.0.1:3000
+}
+```
+
+To update: `git pull && npm ci --omit=dev && sudo systemctl restart trmnl`.
+
 ## Hooking it up to TRMNL
 
 The server must be reachable from the internet. Then in TRMNL, add the **Alias**

@@ -7,6 +7,8 @@ import { parseInZone } from "./plugins/calendar/dates.js";
 import { previewHtml } from "./preview.js";
 
 const PORT = Number(process.env.PORT ?? 3000);
+// Loopback by default; set HOST=0.0.0.0 if the reverse proxy is on another machine.
+const HOST = process.env.HOST || "127.0.0.1";
 const KEY = process.env.SCREEN_KEY;
 
 // Track when the image content last changed so TRMNL's ETag / Last-Modified
@@ -44,7 +46,9 @@ const server = createServer(async (req, res) => {
       const etag = `"${createHash("sha1").update(png).digest("hex").slice(0, 16)}"`;
       if (etag !== last.etag) last = { etag, modified: new Date() };
 
-      if (req.headers["if-none-match"] === etag) {
+      const since = req.headers["if-modified-since"];
+      const unchangedSince = since && Math.floor(last.modified.getTime() / 1000) <= Math.floor(Date.parse(since) / 1000);
+      if (req.headers["if-none-match"] ? req.headers["if-none-match"] === etag : unchangedSince) {
         res.writeHead(304, { etag }).end();
         return;
       }
@@ -66,4 +70,4 @@ const server = createServer(async (req, res) => {
   }
 });
 
-server.listen(PORT, () => console.log(`preview: http://localhost:${PORT}${KEY ? `/?key=${KEY}` : ""}`));
+server.listen(PORT, HOST, () => console.log(`preview: http://${HOST}:${PORT}${KEY ? `/?key=${KEY}` : ""}`));
