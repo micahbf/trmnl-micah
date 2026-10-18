@@ -4,6 +4,10 @@ One "meta plugin" for a TRMNL OG (800×480). It composes sub-plugins into a sing
 **greyscale PNG** (2-bit / 4 shades by default, 1-bit optional) and serves it over HTTP. TRMNL shows that PNG full-screen, so none of
 TRMNL's Framework/markup is involved.
 
+![Calendar sub-plugin (left) and date sub-plugin (right), rendered with demo data](docs/screenshot.png)
+
+<sub>Demo data at 09:05: `npm run render -- --demo --now 2026-10-17T09:05`</sub>
+
 ```
 Google Calendar (ICS) ─┐
 other sources …       ─┼─▶ sub-plugins (JSX) ─▶ Satori → SVG ─▶ resvg → pixels ─▶ 2-bit (4-shade) greyscale PNG
