@@ -113,7 +113,7 @@ export const calendarPlugin: Plugin<CalendarOptions, CalData> = {
             it.type === "header" ? (
               <DayHeader key={i} dayKey={it.key} ctx={ctx} />
             ) : it.type === "empty" ? (
-              <div key={i} style={{ display: "flex", height: ALLDAY_ROW, alignItems: "center", fontSize: 20, marginLeft: 4 }}>
+              <div key={i} style={{ display: "flex", height: ALLDAY_ROW - GAP, marginBottom: GAP, alignItems: "center", fontSize: 20, marginLeft: 4 }}>
                 Nothing else today
               </div>
             ) : it.row.kind === "allday" ? (
