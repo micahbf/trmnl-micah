@@ -323,7 +323,8 @@ function TimedRow({ row, fmt, ctx, timeCol }: { row: Row; fmt: TimeFmt; ctx: Ren
           justifyContent: "center",
           width: timeCol - (inv ? 0 : 4),
           flexShrink: 0,
-          background: inv ? "black" : "white",
+          // Happening now is black; overlapping an earlier event is dark grey (now wins if both).
+          background: row.ongoing ? "black" : inv ? "#404040" : "white",
           color: inv ? "white" : "black",
           border: inv ? "none" : "2px solid black",
         }}
