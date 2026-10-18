@@ -17,6 +17,7 @@ export function demoEvents(ctx: RenderContext): CalEvent[] {
     timed("1:1 with Jordan — quarterly planning and roadmap review", 0, 10, 30, 11, 30),
     timed("Lunch", 0, 12, 0, 13, 0),
     timed("Dentist", 0, 15, 15, 16, 0),
+    timed("School pickup", 0, 15, 30, 16, 15),
     timed("Dinner with Sam & Alex", 0, 19, 0, 21, 30),
     timed("Gym", 1, 7, 0, 8, 0),
     timed("Design review", 1, 10, 0, 11, 30),
