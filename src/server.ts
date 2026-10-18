@@ -17,6 +17,10 @@ let last = { etag: "", modified: new Date() };
 
 const server = createServer(async (req, res) => {
   const url = new URL(req.url ?? "/", `http://${req.headers.host}`);
+  if (url.pathname === "/healthz") {
+    res.writeHead(200).end("ok");
+    return;
+  }
   if (KEY && url.searchParams.get("key") !== KEY) {
     res.writeHead(401).end("unauthorized");
     return;

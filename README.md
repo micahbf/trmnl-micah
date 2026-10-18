@@ -68,7 +68,23 @@ Satori gotchas:
   Noto Sans Math glyphs (`src/glyphs.ts`). They are always black, so avoid them in
   white-on-black text.
 
-## Deploying (Caddy + systemd)
+## Deploying
+
+### Docker (recommended)
+
+```sh
+git clone https://github.com/micahbf/trmnl-micah.git && cd trmnl-micah
+cp .env.example .env   # set GCAL_ICS_URLS, SCREEN_KEY, TZ_DISPLAY (containers are UTC)
+docker compose up -d --build
+```
+
+This publishes the server on the host's `127.0.0.1:3000`. Point Caddy at it with the
+snippet below. To update: `git pull && docker compose up -d --build`.
+
+If Caddy itself runs in Docker, drop `ports:` and put both containers on a shared
+network instead, then use `reverse_proxy trmnl:3000`.
+
+### Without Docker (systemd)
 
 Requires Node 22.2+.
 

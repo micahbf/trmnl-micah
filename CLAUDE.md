@@ -6,6 +6,7 @@ Renders sub-plugins to one 800×480 greyscale PNG for a TRMNL OG (served at `/sc
 - `npm run dev`: preview server at http://localhost:3000, restarts on `src/` changes
 - `npm run render -- --demo --now 2026-10-17T09:05`: writes `out/screen.png`. **Read that PNG to check visual changes.** `--now` is wall-clock time in the display zone; `--demo` uses sample events.
 - `npm run typecheck`. There are no tests.
+- Production runs via `docker compose up -d --build` (Dockerfile runs tsx at runtime; `tsx` is a prod dependency on purpose). `/healthz` skips the key check.
 
 ## Pipeline
 `config.ts` slots → `plugin.load()` → `plugin.render()` JSX → Satori (SVG) → resvg (RGBA) → `png.ts` (custom 1/2-bit greyscale encoder; no sharp). Register new plugins in `render.tsx`.

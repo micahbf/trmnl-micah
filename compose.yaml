@@ -1,0 +1,10 @@
+services:
+  trmnl:
+    build: .
+    restart: unless-stopped
+    env_file: .env          # GCAL_ICS_URLS, SCREEN_KEY, TZ_DISPLAY
+    environment:
+      HOST: 0.0.0.0         # inside the container; overrides .env
+      PORT: 3000
+    ports:
+      - "127.0.0.1:3000:3000"   # host loopback only; Caddy proxies to it
