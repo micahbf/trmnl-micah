@@ -7,4 +7,6 @@ services:
       HOST: 0.0.0.0         # inside the container; overrides .env
       PORT: 3000
     ports:
-      - "127.0.0.1:3000:3000"   # host loopback only; Caddy proxies to it
+      # Host loopback only; Caddy proxies to it. Set HOST_PORT in .env to change
+      # the host side. The container always listens on 3000.
+      - "127.0.0.1:${HOST_PORT:-3000}:3000"

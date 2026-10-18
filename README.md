@@ -81,6 +81,10 @@ docker compose up -d --build
 This publishes the server on the host's `127.0.0.1:3000`. Point Caddy at it with the
 snippet below. To update: `git pull && docker compose up -d --build`.
 
+**Different port:** set `HOST_PORT` in `.env` (e.g. `HOST_PORT=8080`), run
+`docker compose up -d`, and use `reverse_proxy 127.0.0.1:8080` in Caddy. Only the
+host side changes; the container always listens on 3000, so leave `PORT` alone.
+
 If Caddy itself runs in Docker, drop `ports:` and put both containers on a shared
 network instead, then use `reverse_proxy trmnl:3000`.
 
