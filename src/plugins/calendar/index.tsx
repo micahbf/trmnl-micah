@@ -181,6 +181,11 @@ function Timeline({ events, hour12, height, ctx }: {
   const barW = TIMELINE_BARS;
   const nowY = y(ctx.now);
   const showNow = ctx.now.getTime() >= t0 && ctx.now.getTime() <= t1;
+  // Light grey over the part of a box (at `top`, `height` tall) that's already happened.
+  const Elapsed = ({ top, height }: { top: number; height: number }) => {
+    const h = Math.min(Math.max(nowY - top, 0), height);
+    return h > 0 ? <div style={{ position: "absolute", left: 0, top: 0, width: "100%", height: h, background: "#999" }} /> : null;
+  };
   const label = (h: number) => (hour12 ? `${h % 12 || 12}${h % 24 < 12 ? "a" : "p"}` : String(h % 24));
   return (
     <div style={{ display: "flex", position: "relative", width, height, marginLeft: TIMELINE_GAP }}>
@@ -218,15 +223,17 @@ function Timeline({ events, hour12, height, ctx }: {
         );
       })}
       {clusters.map((c, i) => {
-        const past = (d: Date) => (d <= ctx.now ? "#999" : "black");
         const startY = y(c.start);
         const endY = y(c.end) - BAR_GAP;
         if (c.bars.length === 1) {
+          const height = Math.max(3, endY - startY);
           return (
             <div
               key={`e${i}`}
-              style={{ position: "absolute", left: barX, top: startY, width: barW, height: Math.max(3, endY - startY), background: past(c.end) }}
-            />
+              style={{ display: "flex", position: "absolute", left: barX, top: startY, width: barW, height, background: "black" }}
+            >
+              <Elapsed top={startY} height={height} />
+            </div>
           );
         }
         // Overlaps: one box over the whole period, with each event outlined in white inside it.
@@ -245,26 +252,32 @@ function Timeline({ events, hour12, height, ctx }: {
               width: barW,
               height: endY - startY + FRAME * 2,
               // Dark grey to match the overlap time boxes in the list.
-              background: c.end <= ctx.now ? "#999" : "#404040",
+              background: "#404040",
             }}
           >
+            <Elapsed top={startY - FRAME} height={endY - startY + FRAME * 2} />
             {c.bars.map((b, j) => {
               const top = y(b.start);
               const left = FRAME + b.lane * (laneW + FRAME);
+              const height = Math.max(1, y(b.end) - BAR_GAP - top - 2);
               return (
                 <div
                   key={j}
                   style={{
+                    display: "flex",
                     position: "absolute",
                     left,
                     top: top - startY + FRAME,
                     // Borders are content-box, hence the -2s. The last lane takes the rounding slack.
                     width: (b.lane === c.lanes - 1 ? barW - FRAME - left : laneW) - 2,
-                    height: Math.max(1, y(b.end) - BAR_GAP - top - 2),
+                    height,
                     border: "1px solid white",
-                    background: past(b.end),
+                    background: "black",
                   }}
-                />
+                >
+                  {/* Inside the 1px border. */}
+                  <Elapsed top={top + 1} height={height} />
+                </div>
               );
             })}
           </div>

@@ -6,7 +6,7 @@ TRMNL's Framework/markup is involved.
 
 ![Calendar sub-plugin (left) and date sub-plugin (right), rendered with demo data](docs/screenshot.png)
 
-<sub>Demo data at 09:05: `npm run render -- --demo --now 2026-10-17T09:05`</sub>
+<sub>Demo data at 12:30: `npm run render -- --demo --now 2026-10-17T12:30`</sub>
 
 ```
 Google Calendar (ICS) ─┐
