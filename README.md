@@ -36,8 +36,9 @@ Google Calendar → ⚙ Settings → pick the calendar under "Settings for my ca
 (comma-separate multiple calendars). Events you've declined are hidden. Your address is read from the feed, since Google names
 primary calendars after their owner. For other calendars, set `GCAL_EMAIL`.
 
-To hide events by title, add entries to `hideTitles` in `src/config.ts`. Strings match
-anywhere in the title, ignoring case, and regexes work too, e.g. `["Focus time", /^Hold:/]`.
+To hide events by title, set `HIDE_TITLES` in `.env` to a comma-separated list. Entries match
+anywhere in the title, ignoring case, and `/pattern/flags` entries are regexes, e.g.
+`HIDE_TITLES=Focus time,/^Hold:/`.
 
 With no URL configured, the calendar shows demo data.
 

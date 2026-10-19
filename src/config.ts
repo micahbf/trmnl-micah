@@ -1,6 +1,18 @@
 import type { ScreenConfig } from "./types.js";
 import type { CalendarOptions } from "./plugins/calendar/index.js";
 
+/** Comma-separated; `/pattern/flags` entries become regexes, everything else is a plain substring. */
+function parseHideTitles(raw: string): (string | RegExp)[] {
+  return raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .map((s) => {
+      const m = s.match(/^\/(.+)\/([a-z]*)$/);
+      return m ? new RegExp(m[1], m[2]) : s;
+    });
+}
+
 const calendar: CalendarOptions = {
   icsUrls: (process.env.GCAL_ICS_URLS ?? "")
     .split(",")
@@ -12,9 +24,8 @@ const calendar: CalendarOptions = {
   // Whose RSVPs count. Google names primary calendars after the owner's email, so
   // this is detected per feed; set GCAL_EMAIL only if detection doesn't work.
   ownerEmail: process.env.GCAL_EMAIL || undefined,
-  // Hide events by title: strings match anywhere, case-insensitive; regexes for anything fancier.
-  // e.g. ["Focus time", "OOO", /^Hold:/]
-  hideTitles: [],
+  // Hide events by title; set HIDE_TITLES in .env (titles can be private, and the repo is public).
+  hideTitles: parseHideTitles(process.env.HIDE_TITLES ?? ""),
   // Hour grid of today's events down the right edge (first event − 1h to last + 1h).
   timeline: true,
 };
