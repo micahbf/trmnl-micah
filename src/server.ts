@@ -5,11 +5,13 @@ import { config } from "./config.js";
 import { renderScreen } from "./render.js";
 import { parseInZone } from "./plugins/calendar/dates.js";
 import { previewHtml } from "./preview.js";
+import { startWebhook } from "./webhook.js";
 
 const PORT = Number(process.env.PORT ?? 3000);
 // Loopback by default; set HOST=0.0.0.0 if the reverse proxy is on another machine.
 const HOST = process.env.HOST || "127.0.0.1";
 const KEY = process.env.SCREEN_KEY;
+const WEBHOOK_URL = process.env.TRMNL_WEBHOOK_URL;
 
 // Track when the image content last changed so TRMNL's ETag / Last-Modified
 // checks only trigger a redraw when something is actually different.
@@ -75,3 +77,5 @@ const server = createServer(async (req, res) => {
 });
 
 server.listen(PORT, HOST, () => console.log(`preview: http://${HOST}:${PORT}${KEY ? `/?key=${KEY}` : ""}`));
+
+if (WEBHOOK_URL) startWebhook(WEBHOOK_URL);

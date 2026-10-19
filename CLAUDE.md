@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Renders sub-plugins to one 800×480 greyscale PNG for a TRMNL OG (served at `/screen.png`, consumed by TRMNL's Alias plugin). See README for the overall picture.
+Renders sub-plugins to one 800×480 greyscale PNG for a TRMNL OG (served at `/screen.png`, and POSTed every 5 min to TRMNL's Webhook Image plugin when `TRMNL_WEBHOOK_URL` is set; see `webhook.ts`). See README for the overall picture.
 
 ## Commands
 - `npm run dev`: preview server at http://localhost:3000, restarts on `src/` changes
@@ -24,5 +24,5 @@ Renders sub-plugins to one 800×480 greyscale PNG for a TRMNL OG (served at `/sc
 - Declined events are hidden by matching the feed's `X-WR-CALNAME` (the owner's email) against attendee PARTSTAT.
 
 ## Rules
-- Never commit `.env` (it holds private calendar URLs). The repo is public.
+- Never commit `.env` (it holds private calendar URLs and the webhook URL). The repo is public.
 - Don't print or log real calendar contents beyond what's needed to debug.

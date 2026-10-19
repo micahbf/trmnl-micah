@@ -12,7 +12,7 @@ TRMNL's Framework/markup is involved.
 Google Calendar (ICS) ─┐
 other sources …       ─┼─▶ sub-plugins (JSX) ─▶ Satori → SVG ─▶ resvg → pixels ─▶ 2-bit (4-shade) greyscale PNG
                        ┘                                                       │
-                                                       GET /screen.png ◀── TRMNL (Alias plugin)
+                                         GET /screen.png  and/or  POST every 5 min ──▶ TRMNL (Webhook Image)
 ```
 
 ## Quick start
@@ -74,7 +74,7 @@ Satori gotchas:
 
 ```sh
 git clone https://github.com/micahbf/trmnl-micah.git && cd trmnl-micah
-cp .env.example .env   # set GCAL_ICS_URLS, SCREEN_KEY, TZ_DISPLAY (containers are UTC)
+cp .env.example .env   # set GCAL_ICS_URLS, TRMNL_WEBHOOK_URL, SCREEN_KEY, TZ_DISPLAY (containers are UTC)
 docker compose up -d --build
 ```
 
@@ -128,13 +128,27 @@ To update: `git pull && npm ci --omit=dev && sudo systemctl restart trmnl`.
 
 ## Hooking it up to TRMNL
 
-The server must be reachable from the internet. Then in TRMNL, add the **Alias**
-plugin, point it at `https://<your-host>/screen.png?key=<SCREEN_KEY>`, and make it the
-only item in your playlist.
+### Webhook Image (recommended)
 
-The output is already 800×480 greyscale, which is what Alias expects. 2-bit (4-shade)
-images need device firmware 1.6.0+; set `bitDepth: 1` in config if yours shows garbage. The endpoint sends
-`ETag` / `Last-Modified` headers, so TRMNL only redraws when the image actually changes.
+In TRMNL, add the **Webhook Image** plugin, save it, copy its Webhook URL into
+`TRMNL_WEBHOOK_URL` in `.env`, and make the plugin the only item in your playlist. The
+server then renders the screen every 5 minutes and POSTs it there (TRMNL allows 12
+uploads per hour). Unchanged images aren't re-sent. The server doesn't need to be
+reachable from the internet for this; the preview and `/screen.png` keep working.
+
+The webhook URL works like a password: anyone with it can change your display.
+
+### Alias (pull)
+
+Alias only refreshes once a day, but it works if you'd rather TRMNL pull the image.
+The server must be reachable from the internet. Point Alias at
+`https://<your-host>/screen.png?key=<SCREEN_KEY>`. The endpoint sends `ETag` /
+`Last-Modified` headers, so TRMNL only redraws when the image actually changes.
 **Image Display** also works, but it rescales the image.
 
 Set `SCREEN_KEY` before exposing the server, because the image contains your calendar.
+
+### Bit depth
+
+The output is already 800×480 greyscale. 2-bit (4-shade) images need device firmware
+1.6.0+; set `bitDepth: 1` in config if yours shows garbage.
