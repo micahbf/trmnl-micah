@@ -51,6 +51,7 @@ const BAR_GAP = 2; // between back-to-back events, so the boundary reads over a 
 const FRAME = 2; // black margin around white outlines of overlapping events
 const TIMELINE_GAP = 8;
 const TICK = 4;
+const NOW_CHEVRON = 6; // width of the arrowhead left of the now line; it's twice as tall
 const TIMELINE_MARGIN = 1; // hours before the first event and after the last
 const TIMELINE_MIN = [9, 18]; // never start later or end earlier than these hours; also the range for an empty day
 const timelineLabelW = (hour12: boolean) => (hour12 ? 24 : 16);
@@ -192,7 +193,9 @@ function Timeline({ events, hour12, height, ctx }: {
       {Array.from({ length: to - from + 1 }, (_, i) => {
         const h = from + i;
         const top = Math.min(y(at(h)), height - 2);
-        const labeled = h % labelEvery === 0 && h > from && h < to;
+        // Labels are 16px tall around the tick; drop one the now chevron would run into.
+        const nearNow = showNow && Math.abs(top - nowY) < 8 + NOW_CHEVRON;
+        const labeled = h % labelEvery === 0 && h > from && h < to && !nearNow;
         return (
           <div key={`t${h}`} style={{ display: "flex" }}>
             <div style={{ position: "absolute", left: labelW, top, width: TICK, height: 2, background: "black" }} />
@@ -283,7 +286,27 @@ function Timeline({ events, hour12, height, ctx }: {
           </div>
         );
       })}
-      {showNow && <div style={{ position: "absolute", left: labelW, top: Math.min(Math.max(nowY - 2, 0), height - 4), width: width - labelW, height: 4, background: "black" }} />}
+      {showNow && (() => {
+        const top = Math.min(Math.max(nowY - 2, 0), height - 4);
+        return (
+          <>
+            <div style={{ position: "absolute", left: labelW, top, width: width - labelW, height: 4, background: "black" }} />
+            {/* A chevron in the label column, so the now line can't pass for a short event. */}
+            <svg
+              width={NOW_CHEVRON}
+              height={NOW_CHEVRON * 2}
+              viewBox={`0 0 ${NOW_CHEVRON} ${NOW_CHEVRON * 2}`}
+              style={{ position: "absolute", left: labelW - NOW_CHEVRON, top: top + 2 - NOW_CHEVRON }}
+            >
+              {/* Blunt tip as tall as the 4px line, so the two join without a notch. */}
+              <path
+                d={`M0 0 L${NOW_CHEVRON} ${NOW_CHEVRON - 2} L${NOW_CHEVRON} ${NOW_CHEVRON + 2} L0 ${NOW_CHEVRON * 2} Z`}
+                fill="black"
+              />
+            </svg>
+          </>
+        );
+      })()}
     </div>
   );
 }
