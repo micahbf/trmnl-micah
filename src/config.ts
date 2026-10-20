@@ -26,7 +26,7 @@ const calendar: CalendarOptions = {
   ownerEmail: process.env.GCAL_EMAIL || undefined,
   // Hide events by title; set HIDE_TITLES in .env (titles can be private, and the repo is public).
   hideTitles: parseHideTitles(process.env.HIDE_TITLES ?? ""),
-  // Hour grid of today's events down the right edge (first event − 1h to last + 1h).
+  // Hour grid of today's events down the right edge (first event − 1h to last + 1h, at least 9–18).
   timeline: true,
 };
 

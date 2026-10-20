@@ -11,7 +11,7 @@ export interface CalendarOptions {
   ownerEmail?: string;
   /** Hide events whose title contains any of these (case-insensitive) or matches the regex. */
   hideTitles?: (string | RegExp)[];
-  /** Thin hour grid of today's events on the right edge, spanning the first event − 1h to the last + 1h. */
+  /** Thin hour grid of today's events on the right edge, spanning the first event − 1h to the last + 1h, and at least 9–18. */
   timeline?: boolean;
 }
 
@@ -52,7 +52,7 @@ const FRAME = 2; // black margin around white outlines of overlapping events
 const TIMELINE_GAP = 8;
 const TICK = 4;
 const TIMELINE_MARGIN = 1; // hours before the first event and after the last
-const TIMELINE_EMPTY = [7, 22]; // hour range when today has no timed events
+const TIMELINE_MIN = [9, 18]; // never start later or end earlier than these hours; also the range for an empty day
 const timelineLabelW = (hour12: boolean) => (hour12 ? 24 : 16);
 const timelineW = (hour12: boolean) => timelineLabelW(hour12) + TICK + 2 + TIMELINE_BARS;
 
@@ -144,11 +144,11 @@ function Timeline({ events, hour12, height, ctx }: {
     const [h, m] = d.toLocaleTimeString("en-GB", { timeZone: ctx.timeZone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).split(":").map(Number);
     return dayKeyOf(d, ctx.timeZone) < today ? 0 : dayKeyOf(d, ctx.timeZone) > today ? 24 : h + m / 60;
   };
-  // Whole hours from the first event to the last, plus a margin, within today.
-  let [from, to] = TIMELINE_EMPTY;
+  // Whole hours from the first event to the last, plus a margin, covering at least TIMELINE_MIN.
+  let [from, to] = TIMELINE_MIN;
   if (events.length) {
-    from = Math.max(0, Math.floor(Math.min(...events.map((e) => hourOf(e.start)))) - TIMELINE_MARGIN);
-    to = Math.min(24, Math.ceil(Math.max(...events.map((e) => hourOf(e.end)))) + TIMELINE_MARGIN);
+    from = Math.max(0, Math.min(from, Math.floor(Math.min(...events.map((e) => hourOf(e.start)))) - TIMELINE_MARGIN));
+    to = Math.min(24, Math.max(to, Math.ceil(Math.max(...events.map((e) => hourOf(e.end)))) + TIMELINE_MARGIN));
   }
   // Short days get denser labels.
   const labelEvery = to - from <= 8 ? 1 : to - from <= 14 ? 2 : 3;
