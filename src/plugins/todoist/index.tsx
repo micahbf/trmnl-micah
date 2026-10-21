@@ -1,6 +1,6 @@
 import type { Plugin, RenderContext } from "../../types.js";
 import { loadTasks, type Task } from "./api.js";
-import { addDays, dayKeyOf } from "../calendar/dates.js";
+import { addDays, dayKeyOf, parseInZone } from "../calendar/dates.js";
 
 export interface TodoistOptions {
   /** API token (Todoist → Settings → Integrations → Developer). No token shows demo tasks. */
@@ -24,6 +24,8 @@ const BADGE = 52;
 const DOT = 12;
 // Only p1/p2 are fetched and there should be at most a couple; past this the header says "+N more".
 const MAX_ROWS = 3;
+// Timed tasks start showing this long before they are due.
+const LEAD_MS = 60 * 60 * 1000;
 
 const shownCount = (todos: Todo[]) => Math.min(todos.length, MAX_ROWS);
 
@@ -120,12 +122,11 @@ function toTodo(t: Task, ctx: RenderContext): Todo[] {
   // API priority 4 is p1, 3 is p2. The filter already asks for these; this guards against anything else.
   if (t.priority < 3) return [];
   const d = t.due?.date;
-  return [{
-    title: plainText(t.content),
-    priority: 5 - t.priority,
-    // Fixed-zone times end in Z and need converting; dates and floating times are already local.
-    dueDay: !d ? undefined : d.endsWith("Z") ? dayKeyOf(new Date(d), ctx.timeZone) : d.slice(0, 10),
-  }];
+  // Not yet relevant: due on a later day, or at a time more than LEAD_MS away.
+  const at = d?.includes("T") ? parseInZone(d, ctx.timeZone) : undefined;
+  const dueDay = !d ? undefined : at ? dayKeyOf(at, ctx.timeZone) : d;
+  if (at ? at.getTime() - ctx.now.getTime() > LEAD_MS : dueDay && dueDay > dayKeyOf(ctx.now, ctx.timeZone)) return [];
+  return [{ title: plainText(t.content), priority: 5 - t.priority, dueDay }];
 }
 
 /** Task content is Markdown; keep link text and drop emphasis markers. */
