@@ -9,6 +9,8 @@ export const datePlugin: Plugin<undefined, null> = {
   },
 
   render({ size, ctx }) {
+    // Full size fills a whole column; shrink when stacked above something.
+    const k = Math.min(1, size.height / 340);
     const opt = (o: Intl.DateTimeFormatOptions) => ctx.now.toLocaleDateString("en-US", { timeZone: ctx.timeZone, ...o });
     return (
       <div
@@ -21,13 +23,13 @@ export const datePlugin: Plugin<undefined, null> = {
           height: size.height,
         }}
       >
-        <div style={{ display: "flex", fontSize: 40, fontWeight: 800, textTransform: "uppercase", letterSpacing: 2 }}>
+        <div style={{ display: "flex", fontSize: Math.round(40 * k), fontWeight: 800, textTransform: "uppercase", letterSpacing: 2 * k }}>
           {opt({ weekday: "long" })}
         </div>
-        <div style={{ display: "flex", fontSize: 200, fontWeight: 800, lineHeight: 1, letterSpacing: -8 }}>
+        <div style={{ display: "flex", fontSize: Math.round(200 * k), fontWeight: 800, lineHeight: 1, letterSpacing: -8 * k }}>
           {opt({ day: "numeric" })}
         </div>
-        <div style={{ display: "flex", fontSize: 40, fontWeight: 600 }}>{opt({ month: "long", year: "numeric" })}</div>
+        <div style={{ display: "flex", fontSize: Math.round(40 * k), fontWeight: 600 }}>{opt({ month: "long", year: "numeric" })}</div>
       </div>
     );
   },

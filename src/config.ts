@@ -1,5 +1,6 @@
 import type { ScreenConfig } from "./types.js";
 import type { CalendarOptions } from "./plugins/calendar/index.js";
+import type { TodoistOptions } from "./plugins/todoist/index.js";
 
 /** Comma-separated; `/pattern/flags` entries become regexes, everything else is a plain substring. */
 function parseHideTitles(raw: string): (string | RegExp)[] {
@@ -30,6 +31,11 @@ const calendar: CalendarOptions = {
   timeline: true,
 };
 
+// p1/p2 tasks under the date; the date fills the column when there are none.
+const todoist: TodoistOptions = {
+  token: process.env.TODOIST_TOKEN ?? "",
+};
+
 export const config: ScreenConfig = {
   // TRMNL OG
   width: 800,
@@ -39,6 +45,6 @@ export const config: ScreenConfig = {
   bitDepth: 2,
   slots: [
     { plugin: "calendar", options: calendar },
-    { plugin: "date" },
+    { stack: [{ plugin: "date" }, { plugin: "todoist", options: todoist }] },
   ],
 };

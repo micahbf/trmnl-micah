@@ -22,14 +22,27 @@ export interface Plugin<Options = unknown, Data = unknown> {
   id: string;
   load(options: Options, ctx: RenderContext): Promise<Data>;
   render(props: { data: Data; options: Options; size: SlotSize; ctx: RenderContext }): ReactElement;
+  /**
+   * In a stack, how tall this plugin wants to be for `data` (0 hides it). Plugins
+   * without it share whatever height is left.
+   */
+  height?(props: { data: Data; options: Options; width: number }): number;
 }
 
-export interface Slot {
+export interface PluginSlot {
   plugin: string;
   options?: unknown;
   /** Share of the row width (flex-grow style). Defaults to 1. */
   weight?: number;
 }
+
+/** Plugins stacked top → bottom in one column, with a divider between them. */
+export interface StackSlot {
+  stack: Omit<PluginSlot, "weight">[];
+  weight?: number;
+}
+
+export type Slot = PluginSlot | StackSlot;
 
 export interface ScreenConfig {
   width: number;

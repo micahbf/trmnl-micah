@@ -23,6 +23,10 @@ Renders sub-plugins to one 800×480 greyscale PNG for a TRMNL OG (served at `/sc
 - Times are displayed in `config.timeZone` (`TZ_DISPLAY`, defaulting to the system zone). Use `dates.ts` helpers (`dayKeyOf`, `parseInZone`); don't use `Date` local-time methods.
 - Declined events are hidden by matching the feed's `X-WR-CALNAME` (the owner's email) against attendee PARTSTAT.
 
+## Todoist plugin
+- Uses the v1 API (`GET /api/v1/tasks/filter?query=p1 | p2`, Bearer `TODOIST_TOKEN`), cached 5 minutes. API priority 4 is the app's p1 and 3 is p2.
+- Stacked under `date` via `height()`, which returns 0 with no tasks so the date gets the whole column. The date scales its fonts to its height.
+
 ## Rules
-- Never commit `.env` (it holds private calendar URLs and the webhook URL). The repo is public.
+- Never commit `.env` (it holds private calendar URLs, the Todoist token, and the webhook URL). The repo is public.
 - Don't print or log real calendar contents beyond what's needed to debug.

@@ -4,13 +4,13 @@ One "meta plugin" for a TRMNL OG (800×480). It composes sub-plugins into a sing
 **greyscale PNG** (2-bit / 4 shades by default, 1-bit optional) and serves it over HTTP. TRMNL shows that PNG full-screen, so none of
 TRMNL's Framework/markup is involved.
 
-![Calendar sub-plugin (left) and date sub-plugin (right), rendered with demo data](docs/screenshot.png)
+![Calendar sub-plugin (left), date and Todoist sub-plugins (right), rendered with demo data](docs/screenshot.png)
 
 <sub>Demo data at 12:30: `npm run render -- --demo --now 2026-10-17T12:30`</sub>
 
 ```
 Google Calendar (ICS) ─┐
-other sources …       ─┼─▶ sub-plugins (JSX) ─▶ Satori → SVG ─▶ resvg → pixels ─▶ 2-bit (4-shade) greyscale PNG
+Todoist (p1/p2 tasks) ─┼─▶ sub-plugins (JSX) ─▶ Satori → SVG ─▶ resvg → pixels ─▶ 2-bit (4-shade) greyscale PNG
                        ┘                                                       │
                                          GET /screen.png  and/or  POST every 5 min ──▶ TRMNL (Webhook Image)
 ```
@@ -42,18 +42,27 @@ anywhere in the title, ignoring case, and `/pattern/flags` entries are regexes, 
 
 With no URL configured, the calendar shows demo data.
 
+### Todoist
+
+Todoist → Settings → Integrations → **Developer** → copy the API token into `TODOIST_TOKEN`.
+Open p1 and p2 tasks are listed under the date, p1 first (overdue and soonest-due first within
+each priority). Up to 3 are shown, with "+N more" if there are extra. With none, the panel disappears and
+the date fills the column. With no token, it shows demo tasks.
+
 ## Layout & sub-plugins
 
 `src/config.ts` defines the screen as a row of slots, separated by a divider:
 
 ```ts
 slots: [
-  { plugin: "calendar", options: calendar },   // left half
-  { plugin: "date" },                          // right half
+  { plugin: "calendar", options: calendar },                                // left half
+  { stack: [{ plugin: "date" }, { plugin: "todoist", options: todoist }] }, // right half, top → bottom
 ]
 ```
 
 `weight` changes the width split, e.g. `{ plugin: "calendar", weight: 2 }` for ⅔ width.
+In a `stack`, a plugin that implements `height()` gets exactly that height (0 hides it), and the
+others share the rest.
 
 To add a sub-plugin, create `src/plugins/<name>/index.tsx` exporting a `Plugin`
 (`load()` fetches data, `render()` returns JSX for exactly `size.width × size.height`),
