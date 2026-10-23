@@ -12,7 +12,7 @@ TRMNL's Framework/markup is involved.
 Google Calendar (ICS) ─┐
 Todoist (p1/p2 tasks) ─┼─▶ sub-plugins (JSX) ─▶ Satori → SVG ─▶ resvg → pixels ─▶ 2-bit (4-shade) greyscale PNG
                        ┘                                                       │
-                                         GET /screen.png  and/or  POST every 5 min ──▶ TRMNL (Webhook Image)
+                                         GET /screen.png  and/or  POST every 6 min ──▶ TRMNL (Webhook Image)
 ```
 
 ## Quick start
@@ -142,8 +142,9 @@ To update: `git pull && npm ci --omit=dev && sudo systemctl restart trmnl`.
 
 In TRMNL, add the **Webhook Image** plugin, save it, copy its Webhook URL into
 `TRMNL_WEBHOOK_URL` in `.env`, and make the plugin the only item in your playlist. The
-server then renders the screen every 5 minutes and POSTs it there (TRMNL allows 12
-uploads per hour). Unchanged images aren't re-sent. The server doesn't need to be
+server then renders the screen every 6 minutes and POSTs it there (TRMNL allows 12
+uploads per hour; the margin avoids 429s). Unchanged images aren't re-sent, and a 429
+backs off up to an hour. The server doesn't need to be
 reachable from the internet for this; the preview and `/screen.png` keep working.
 
 The webhook URL works like a password: anyone with it can change your display.

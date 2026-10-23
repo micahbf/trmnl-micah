@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Renders sub-plugins to one 800×480 greyscale PNG for a TRMNL OG (served at `/screen.png`, and POSTed every 5 min to TRMNL's Webhook Image plugin when `TRMNL_WEBHOOK_URL` is set; see `webhook.ts`). See README for the overall picture.
+Renders sub-plugins to one 800×480 greyscale PNG for a TRMNL OG (served at `/screen.png`, and POSTed every 6 min (backing off on 429) to TRMNL's Webhook Image plugin when `TRMNL_WEBHOOK_URL` is set; see `webhook.ts`). See README for the overall picture.
 
 ## Commands
 - `npm run dev`: preview server at http://localhost:3000, restarts on `src/` changes

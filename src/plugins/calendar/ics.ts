@@ -50,7 +50,11 @@ export function parseIcs(
     ICAL.TimezoneService.register(new ICAL.Timezone(tz));
   }
 
-  const all = root.getAllSubcomponents("vevent").map((v) => new ICAL.Event(v));
+  // `exceptions: []` stops each Event from scanning every VEVENT in the feed and
+  // relating all RECURRENCE-IDs regardless of UID: O(n²), ~20 s on a Pi for a
+  // 2000-event feed, and it could swap in another series' exception. We relate
+  // them by UID below.
+  const all = root.getAllSubcomponents("vevent").map((v) => new ICAL.Event(v, { exceptions: [] }));
   const masters = new Map<string, ICAL.Event>();
   for (const ev of all) if (!ev.isRecurrenceException()) masters.set(ev.uid, ev);
   for (const ev of all) {

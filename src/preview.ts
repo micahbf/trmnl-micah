@@ -53,7 +53,9 @@ export const previewHtml = /* html */ `<!doctype html>
   $("now").addEventListener("input", () => { if ($("now").value) refresh(); });
   $("reset-now").addEventListener("click", () => { $("now").value = ""; refresh(); });
   $("refresh").addEventListener("click", refresh);
-  setInterval(refresh, 60_000);
+  // Only while the tab is visible (each refresh is a full server render); catch up when it's shown again.
+  setInterval(() => { if (!document.hidden) refresh(); }, 60_000);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) refresh(); });
 
   // Reload whenever the dev server restarts (i.e. you saved a source file).
   let dropped = false;
